@@ -1,16 +1,17 @@
-
 import React, { useState, useCallback } from 'react';
 import { generateRecipesFromImage } from './services/geminiService';
 import { Recipe } from './types';
 import ImageUploader from './components/ImageUploader';
 import RecipeCard from './components/RecipeCard';
 import Spinner from './components/Spinner';
+import RecipeModal from './components/RecipeModal';
 
 const App: React.FC = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [recipes, setRecipes] = useState<Recipe[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -40,8 +41,23 @@ const App: React.FC = () => {
       const generatedRecipes = await generateRecipesFromImage(base64Image, imageFile.type);
       setRecipes(generatedRecipes);
     } catch (err) {
-      console.error(err);
-      setError("Failed to generate recipes. The model may be unavailable or the image could not be processed. Please try again.");
+      console.error("Detailed error:", err);
+      let errorMessage = "An unexpected error occurred. Please try again.";
+      
+      if (err instanceof Error) {
+        const lowerCaseError = err.message.toLowerCase();
+        if (lowerCaseError.includes('rate limit') || lowerCaseError.includes('429')) {
+          errorMessage = "You're making too many requests. Please wait a moment before trying again.";
+        } else if (lowerCaseError.includes('invalid') && (lowerCaseError.includes('image') || lowerCaseError.includes('argument'))) {
+          errorMessage = "The uploaded image is invalid or in an unsupported format. Please try a different photo.";
+        } else if (lowerCaseError.includes('api key')) {
+          errorMessage = "There's an issue with the service configuration. Please contact support.";
+        } else if (lowerCaseError.includes('server error') || lowerCaseError.includes('500')) {
+            errorMessage = "The recipe service is temporarily unavailable. Please try again later.";
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -51,7 +67,7 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-green-50 flex flex-col items-center p-4 sm:p-6 lg:p-8 font-sans">
       <header className="w-full max-w-4xl text-center mb-8">
         <div className="flex justify-center items-center gap-4 mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-green-600" viewBox="0 0 24 24" fill="currentColor">
+          <svg xmlns="http://www.w.org/2000/svg" className="h-12 w-12 text-green-600" viewBox="0 0 24 24" fill="currentColor">
             <path d="M21.58,16.09l-1.09-7.66C20.21,6.46,18.52,5,16.53,5H7.47C5.48,5,3.79,6.46,3.51,8.43L2.42,16.09C2.17,17.74,3.4,19,5,19h14C20.6,19,21.83,17.74,21.58,16.09z M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,20c-4.41,0-8-3.59-8-8s3.59-8,8-8s8,3.59,8,8S16.41,20,12,20z"/>
             <path d="M5,19h14c1.6,0,2.83-1.26,2.58-2.91l-1.09-7.66C20.21,6.46,18.52,5,16.53,5H7.47C5.48,5,3.79,6.46,3.51,8.43L2.42,16.09C2.17,17.74,3.4,19,5,19z" opacity="0.3"/>
           </svg>
@@ -107,12 +123,16 @@ const App: React.FC = () => {
             <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">Here's what you can make!</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {recipes.map((recipe, index) => (
-                <RecipeCard key={index} recipe={recipe} />
+                <RecipeCard key={index} recipe={recipe} onViewRecipe={() => setSelectedRecipe(recipe)} />
               ))}
             </div>
           </div>
         )}
       </main>
+
+      {selectedRecipe && (
+        <RecipeModal recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} />
+      )}
     </div>
   );
 };

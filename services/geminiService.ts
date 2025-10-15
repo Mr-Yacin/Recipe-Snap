@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { Recipe } from '../types';
 
@@ -21,7 +20,7 @@ export const generateRecipesFromImage = async (base64Image: string, mimeType: st
             },
           },
           {
-            text: 'Identify the ingredients in this image. Based on these ingredients, generate 3 creative and delicious recipes. For each recipe, provide a name, a short, enticing description, and a list of the ingredients needed.',
+            text: 'Identify the ingredients in this image. Based on these ingredients, generate 3 creative and delicious recipes. For each recipe, provide a name, a short, enticing description, a list of the ingredients needed, and step-by-step cooking instructions.',
           },
         ],
       },
@@ -47,8 +46,15 @@ export const generateRecipesFromImage = async (base64Image: string, mimeType: st
                 },
                 description: 'A list of ingredients required for the recipe.',
               },
+              instructions: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.STRING,
+                },
+                description: 'Step-by-step cooking instructions.',
+              }
             },
-            required: ['recipeName', 'description', 'ingredients'],
+            required: ['recipeName', 'description', 'ingredients', 'instructions'],
           },
         },
       },
@@ -60,6 +66,7 @@ export const generateRecipesFromImage = async (base64Image: string, mimeType: st
 
   } catch (error) {
     console.error('Error generating recipes with Gemini:', error);
-    throw new Error('Failed to generate recipes from Gemini API.');
+    // Re-throw the original error so the calling component can handle it specifically.
+    throw error;
   }
 };
