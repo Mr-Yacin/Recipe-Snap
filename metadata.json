@@ -1,0 +1,5 @@
+{
+  "name": "Recipe Snap",
+  "description": "An application that generates delicious recipes based on a photo of the ingredients you have on hand. Simply snap a picture, and let Gemini's AI craft creative meal ideas for you.",
+  "requestFramePermissions": []
+}
